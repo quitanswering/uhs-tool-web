@@ -71,6 +71,8 @@ input[type=search]{flex:1 1 180px;min-width:0;font:400 14px var(--f);padding:7px
 .b.uhsoff{background:var(--off-bg);color:var(--muted)}
 .b.uhsval{background:var(--sunk);color:var(--muted);border:1px solid var(--line)}
 .fieldval{font:600 12px var(--mono);color:var(--on);padding-top:2px}
+.fieldsel{font:600 12px var(--mono);color:var(--on);background:var(--sunk);border:1px solid var(--line);border-radius:5px;padding:2px 4px;max-width:66px}
+#btnAdapter.off{border-color:var(--chg);color:var(--chg)}
 .msg{padding:10px 14px;border-radius:8px;margin:10px 0;font-size:14px;display:none}
 .msg.show{display:block}
 .msg.err{background:var(--chg-bg);color:var(--chg)}
@@ -90,6 +92,7 @@ footer{font-size:12px;color:var(--muted);margin-top:18px;text-align:center}
     <div class="toolbar">
       <span class="vbatt" id="vbatt" title="Напряжение на разъёме OBD">АКБ: — В</span>
       <span class="status" id="status">офлайн · нажми «Считать»</span>
+      <button id="btnAdapter" title="Освободить адаптер (например, для HELPGM) без остановки сервера">Адаптер: подключён ●</button>
       <button class="primary" id="btnRead">Считать с приборки</button>
       <button id="btnWrite" disabled>Записать изменения</button>
     </div>

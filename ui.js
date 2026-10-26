@@ -18,6 +18,8 @@ let cur = {};           // block -> Uint8Array (as read)
 let edited = {};        // block -> Uint8Array (working copy)
 let openBlocks = {};    // block -> bool
 let filter = "all", query = "";
+let adapterOn = true;
+try{ adapterOn = localStorage.getItem("uhs_adapter") !== "off"; }catch(e){}
 
 // When served from GitHub Pages (static), drive a local backend running next to
 // the adapter; when served by that backend itself, same-origin. If the backend
@@ -39,6 +41,7 @@ const el = (t, c, txt) => { const e = document.createElement(t); if (c) e.classN
 function hexToBytes(h, len){ const a = new Uint8Array(len); for (let i=0;i<len;i++){ a[i]=parseInt(h.substr(i*2,2),16)||0; } return a; }
 function getBit(a,n){ return (a[(n-1)>>3] >> (7-((n-1)&7))) & 1; }
 function setBit(a,n,v){ const i=(n-1)>>3, s=7-((n-1)&7); a[i] = v ? (a[i]|(1<<s)) : (a[i]&~(1<<s)); }
+function setField(a,lo,hi,v){ for(let n=lo;n<=hi;n++) setBit(a,n,(v>>(hi-n))&1); }  // MSB = lo
 function field(a,lo,hi){ let v=0; for(let n=lo;n<=hi;n++) v=(v<<1)|getBit(a,n); return v; }
 function parseN(n){ const m=String(n).trim().replace(/\.0+$/,"").match(/^(\d+)(?:\s*-\s*(\d+))?$/); return m ? [ +m[1], m[2]?+m[2]:+m[1] ] : null; }
 function changedBlock(b){ const a=cur[b], e=edited[b]; if(!a) return false; for(let i=0;i<a.length;i++) if(a[i]!==e[i]) return true; return false; }
@@ -93,6 +96,7 @@ function fmtTs(iso){
 }
 
 async function read(){
+  if(!adapterOn){ msg("Адаптер отключён — включи его кнопкой «Адаптер».", "err"); return; }
   clearMsg(); $("btnRead").disabled=true; $("status").textContent="читаю…";
   try{
     const r = await fetch(API+"/api/read").then(r=>r.json());
@@ -157,7 +161,8 @@ function render(){
         const unknown = !named && !described;   // truly unknown = no name AND no description
         const val = single ? getBit(edited[b],lo) : field(edited[b],lo,hi);
         if(!rowMatch(r,val,unknown)) continue;
-        const changed = single && getBit(cur[b],lo)!==getBit(edited[b],lo);
+        const changed = single ? (getBit(cur[b],lo)!==getBit(edited[b],lo))
+                                : (field(cur[b],lo,hi)!==field(edited[b],lo,hi));
 
         const row=el("div","row"+(unknown?" unknown":"")+(changed?" changed":""));
         row.appendChild(el("div","n","№"+r.n));
@@ -166,7 +171,21 @@ function render(){
           cb.onchange=()=>{ setBit(edited[b],lo,cb.checked?1:0); render(); };
           row.appendChild(cb);
         } else {
-          row.appendChild(el("div","fieldval","="+val));
+          const width=hi-lo+1;
+          if(width<=4){
+            const max=(1<<width)-1;
+            const sel=el("select","fieldsel");
+            for(let v=0;v<=max;v++){ const o=el("option",null,String(v)); o.value=String(v); if(v===val)o.selected=true; sel.appendChild(o); }
+            sel.onchange=()=>{ setField(edited[b],lo,hi,parseInt(sel.value,10)); render(); };
+            row.appendChild(sel);
+          } else if(width<=16){
+            const mx=(1<<width)-1;
+            const inp=el("input","fieldsel"); inp.type="number"; inp.min="0"; inp.max=String(mx); inp.step="1"; inp.value=String(val);
+            inp.onchange=()=>{ let v=parseInt(inp.value,10); if(!(v>=0))v=0; if(v>mx)v=mx; setField(edited[b],lo,hi,v); render(); };
+            row.appendChild(inp);
+          } else {
+            row.appendChild(el("div","fieldval","="+val));
+          }
         }
         const nm=el("div","nm");
         nm.appendChild(el("div","ru", r.ru || r.param || "Неизвестно"));
@@ -196,7 +215,7 @@ function render(){
     }
     root.appendChild(card);
   }
-  $("btnWrite").disabled=!anyChanged;
+  $("btnWrite").disabled=!anyChanged || !adapterOn;
   $("btnWrite").textContent = anyChanged ? "Записать изменения" : "Нет изменений";
 }
 
@@ -228,10 +247,24 @@ $("btnRead").onclick=read;
 $("btnWrite").onclick=write;
 $("backupSel").onchange=e=>{ $("btnLoad").disabled=!e.target.value; };
 $("btnLoad").onclick=()=>applyBackup($("backupSel").value);
+function renderAdapter(){
+  const b=$("btnAdapter");
+  b.textContent = adapterOn ? "Адаптер: подключён ●" : "Адаптер: отключён ○";
+  b.classList.toggle("off", !adapterOn);
+  $("btnRead").disabled = !adapterOn;
+  if(!adapterOn){ const e=$("vbatt"); e.textContent="АКБ: — В"; e.className="vbatt"; }
+}
+$("btnAdapter").onclick=()=>{
+  adapterOn=!adapterOn;
+  try{ localStorage.setItem("uhs_adapter", adapterOn?"on":"off"); }catch(e){}
+  renderAdapter();
+  if(Object.keys(cur).length) render();
+};
+renderAdapter();
 
 let busy=false;
 async function pollVbatt(){
-  if(busy) return;
+  if(busy || !adapterOn) return;
   try{
     const r=await fetch(API+"/api/vbatt").then(r=>r.json());
     const el=$("vbatt");
