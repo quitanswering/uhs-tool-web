@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UHS приборка — конфигуратор</title>
+<style>
+:root{
+  --bg:#eceef1;--panel:#fff;--sunk:#f5f6f8;--fg:#1a2028;--muted:#5d6874;--line:#d3d8de;
+  --accent:#0b7480;--on:#b86a0a;--on-bg:#fbe6c2;--unk:#6a4ca3;--unk-bg:#ece5f7;
+  --chg:#c93c24;--chg-bg:#fbe3de;--ok:#1f8a4c;--off-bg:#e4e7eb;
+  --f:"Segoe UI",system-ui,-apple-system,sans-serif;--mono:ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0c1015;--panel:#141a21;--sunk:#10151b;--fg:#e4e9ee;--muted:#8b97a4;--line:#25303b;
+  --accent:#56c7ce;--on:#f2a93b;--on-bg:#3b2a0f;--unk:#b9a2e3;--unk-bg:#2a2140;
+  --chg:#ff7b5e;--chg-bg:#3a1a12;--ok:#5fcf86;--off-bg:#1c242d;color-scheme:dark;
+}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--f);font-size:15px;line-height:1.45}
+.wrap{max-width:1100px;margin:0 auto;padding:16px}
+header{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;margin-bottom:14px}
+h1{font-size:22px;margin:0;font-weight:700}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+button{font:600 14px var(--f);padding:8px 14px;border-radius:7px;border:1px solid var(--line);background:var(--panel);color:var(--fg);cursor:pointer}
+button.primary{background:var(--accent);color:#fff;border-color:transparent}
+button.danger{border-color:var(--chg);color:var(--chg)}
+button:disabled{opacity:.5;cursor:default}
+.status{font-size:13px;color:var(--muted)}
+.vbatt{font:600 14px var(--mono);padding:5px 10px;border-radius:7px;border:1px solid var(--line);background:var(--sunk);color:var(--fg);white-space:nowrap}
+.vbatt.low{color:var(--chg);border-color:var(--chg)}
+.vbatt.ok{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 50%,transparent)}
+.legend{display:flex;gap:6px 14px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);margin-bottom:12px}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.sw{width:13px;height:13px;border-radius:3px;border:1px solid var(--line);display:inline-block}
+.sw.on{background:var(--on-bg);border-color:var(--on)}
+.sw.unk{background:var(--unk-bg);border-color:var(--unk)}
+.sw.chg{background:var(--chg-bg);border-color:var(--chg)}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.chip{font:500 13px var(--f);padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:var(--sunk);cursor:pointer}
+.chip[aria-pressed=true]{background:var(--fg);color:var(--panel);border-color:var(--fg)}
+input[type=search]{flex:1 1 180px;min-width:0;font:400 14px var(--f);padding:7px 11px;border:1px solid var(--line);border-radius:7px;background:var(--sunk);color:var(--fg)}
+.block{background:var(--panel);border:1px solid var(--line);border-radius:9px;margin-bottom:10px;overflow:hidden}
+.bhead{display:flex;align-items:center;gap:10px;padding:11px 14px;cursor:pointer;user-select:none}
+.bhead:hover{background:var(--sunk)}
+.bhead .tag{font:700 13px var(--mono);background:var(--sunk);border:1px solid var(--line);border-radius:5px;padding:2px 7px}
+.bhead .d{flex:1;min-width:0}
+.bhead .d .t{font-weight:600}
+.bhead .d .s{font-size:12.5px;color:var(--muted)}
+.bhead .cnt{font-size:12px;color:var(--muted);white-space:nowrap}
+.bhead .chgmark{color:var(--chg);font-weight:700;font-size:12px}
+.hex{font:400 11.5px/1.5 var(--mono);color:var(--muted);padding:0 14px 10px;word-break:break-all}
+.hex i{font-style:normal;color:var(--chg);font-weight:700}
+.rows{border-top:1px solid var(--line)}
+.row{display:grid;grid-template-columns:34px 44px 1fr auto;gap:10px;align-items:start;padding:8px 14px;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
+.row label{display:contents;cursor:pointer}
+.row .n{font:500 12px var(--mono);color:var(--muted);padding-top:3px}
+.row input[type=checkbox]{width:18px;height:18px;margin-top:2px;accent-color:var(--accent)}
+.row .nm{min-width:0}
+.row .ru{overflow-wrap:anywhere}
+.row .p{font:400 11px var(--mono);color:var(--muted);overflow-wrap:anywhere}
+.row .ts{font:400 11px var(--f);color:var(--accent);margin-top:2px}
+.row.unknown .ru{color:var(--muted);font-style:italic}
+.row.changed{background:var(--chg-bg)}
+.badges{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+.b{font:600 10px var(--mono);padding:2px 5px;border-radius:3px}
+.b.unk{background:var(--unk-bg);color:var(--unk)}
+.b.fld{background:var(--sunk);color:var(--muted);border:1px solid var(--line)}
+.b.uhson{background:color-mix(in srgb,var(--ok) 22%,transparent);color:var(--ok)}
+.b.uhsoff{background:var(--off-bg);color:var(--muted)}
+.b.uhsval{background:var(--sunk);color:var(--muted);border:1px solid var(--line)}
+.fieldval{font:600 12px var(--mono);color:var(--on);padding-top:2px}
+.msg{padding:10px 14px;border-radius:8px;margin:10px 0;font-size:14px;display:none}
+.msg.show{display:block}
+.msg.err{background:var(--chg-bg);color:var(--chg)}
+.msg.ok{background:var(--sunk);color:var(--ok)}
+.hint{font-size:13px;color:var(--muted);margin:2px 0 14px}
+.loadrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 14px}
+.loadrow label{font-size:13px;color:var(--muted)}
+.loadrow select{font:400 13px var(--f);padding:6px 9px;border:1px solid var(--line);border-radius:7px;background:var(--sunk);color:var(--fg);max-width:230px}
+.loadrow .loadhint{flex:1 1 220px;font-size:12px;color:var(--muted)}
+footer{font-size:12px;color:var(--muted);margin-top:18px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>UHS приборка — конфигуратор</h1>
+    <div class="toolbar">
+      <span class="vbatt" id="vbatt" title="Напряжение на разъёме OBD">АКБ: — В</span>
+      <span class="status" id="status">офлайн · нажми «Считать»</span>
+      <button class="primary" id="btnRead">Считать с приборки</button>
+      <button id="btnWrite" disabled>Записать изменения</button>
+    </div>
+  </header>
+
+  <div class="hint">Чтение и запись идут напрямую через адаптер J2534, без интернета. Запись делает бэкап и сверку. Закрой HELPGM перед работой.</div>
+
+  <div class="loadrow">
+    <label for="backupSel">Сохранённый конфиг:</label>
+    <select id="backupSel"><option value="">— выбери бэкап —</option></select>
+    <button id="btnLoad" disabled>Загрузить в редактор</button>
+    <span class="loadhint">загружает сохранённый дамп в редактор; после «Считать» покажет отличия от текущего и даст записать обратно</span>
+  </div>
+
+  <div class="legend">
+    <span><i class="sw on"></i>включён</span>
+    <span><i class="sw unk"></i>Неизвестный (нет имени и описания)</span>
+    <span><i class="sw chg"></i>изменён, не записан</span>
+    <span>UHS ● / ○ — исходное состояние в стоковой приборке</span>
+  </div>
+
+  <div class="filters">
+    <button class="chip" data-f="all" aria-pressed="true">Все</button>
+    <button class="chip" data-f="on" aria-pressed="false">Включённые</button>
+    <button class="chip" data-f="named" aria-pressed="false">Известные</button>
+    <button class="chip" data-f="unk" aria-pressed="false">Неизвестные</button>
+    <input type="search" id="q" placeholder="Поиск по имени или описанию">
+  </div>
+
+  <div id="msg" class="msg"></div>
+  <div id="blocks"></div>
+
+  <footer>Биты: №1 = старший бит первого байта. Данные блоков = GMLAN DID. Ключ записи вшит (seed 7295 → key B44E).</footer>
+</div>
+
+<script src="ui.js"></script>
+</body>
+</html>
